@@ -1,13 +1,15 @@
 package wavetechstudio.sms.retriever.apimaster;
 
+import android.content.Context;
 import android.content.IntentFilter;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.google.android.gms.auth.api.phone.SmsRetriever;
 import com.google.android.gms.auth.api.phone.SmsRetrieverClient;
@@ -15,24 +17,36 @@ import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 public class MainActivity extends AppCompatActivity implements
         SMSReceiver.OTPReceiveListener {
 
     public static final String TAG = MainActivity.class.getSimpleName();
 
     private SMSReceiver smsReceiver;
+    String smsResult = "";
+    Context context;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        this.context = this;
         AppSignatureHashHelper appSignatureHashHelper = new AppSignatureHashHelper(this);
 
         // This code requires one time to get Hash keys do comment and share key
         Log.i(TAG, "HashKey: " + appSignatureHashHelper.getAppSignatures().get(0));
 
         startSMSListener();
+
+
+//        extract("[Web 발신]\n" +
+//                "<#> 타인노출금지[레몬헬스케어]\n" +
+//                "인증번호[123456]\n" +
+//                "6GIJBRZis7Z");
+
     }
 
 
@@ -57,6 +71,7 @@ public class MainActivity extends AppCompatActivity implements
                 @Override
                 public void onSuccess(Void aVoid) {
                     // API successfully started
+                    Log.d("onSuccess", "#### success");
                 }
             });
 
@@ -75,10 +90,24 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     public void onOTPReceived(String otp) {
         showToast("OTP Received: " + otp);
+        Log.d("onOTPReceived", "#### otp:"+ otp);
+
+        extract(otp);
 
         if (smsReceiver != null) {
             unregisterReceiver(smsReceiver);
             smsReceiver = null;
+        }
+    }
+
+    private void extract(String smsString) {
+        //https://enterkey.tistory.com/353
+        Pattern p = Pattern.compile("인증번호\\[(.*?)\\]");
+        Matcher m = p.matcher(smsString);
+        m.find();
+        if (m.matches()) {
+            System.out.println(m.group(1));
+            smsResult = m.group(1);
         }
     }
 
